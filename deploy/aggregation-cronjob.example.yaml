@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: dashboard-compute-aggregate
+spec:
+  schedule: "50 16 * * *"
+  timeZone: Europe/Stockholm
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          containers:
+            - name: aggregate
+              image: REPLACE_WITH_DASHBOARD_IMAGE
+              command: ["python", "manage.py", "aggregate_compute"]
+              # Set DASHBOARD_COMPUTE_ENABLED and database settings using approved secrets.

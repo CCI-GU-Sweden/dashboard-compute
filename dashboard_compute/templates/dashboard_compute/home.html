@@ -2,13 +2,14 @@
 {% block content %}
 <section class="section"><div class="container">
   <h1 class="title">Compute snapshots</h1>
-  <p>Observed intervals only: gaps and short jobs are not estimated. Values are incomplete and are not invoices. Disk is unavailable from the Kubernetes resource metrics API.</p>
+  <p>Estimates interpolate between samples of the same pod, up to a five-minute gap. Short or unsampled jobs are missing. Daily totals are not invoices; disk is unavailable. Days use Stockholm time.</p>
   <form method="get"><label>Year <input name="year" type="number" min="1" max="9998" value="{{ month.year }}"></label> <label>Month <input name="month" type="number" min="1" max="12" value="{{ month.month }}"></label> <button type="submit">Show</button></form>
   <h2 class="subtitle">{{ month|date:"F Y" }}</h2>
   <table class="table is-striped is-fullwidth"><thead><tr><th>Day</th><th>Group</th><th>Observed seconds</th><th>CPU core-hours</th><th>RAM GiB-hours</th><th>Estimated cost</th><th>Unpriced intervals</th></tr></thead><tbody>
-  {% for day in days %}{% for group, item in day.groups.items %}<tr><td>{{ day.day }}</td><td>{{ group }}</td><td>{{ item.seconds|floatformat:1 }}</td><td>{{ item.cpu|floatformat:5 }}</td><td>{{ item.memory|floatformat:5 }}</td><td>{% for currency, amount in item.costs.items %}{{ amount|floatformat:4 }} {{ currency }} {% empty %}—{% endfor %}</td><td>{{ item.unpriced }}</td></tr>{% empty %}<tr><td>{{ day.day }}</td><td colspan="6">No samples</td></tr>{% endfor %}{% endfor %}</tbody></table>
-  <h2 class="subtitle">Recent samples</h2>
-  <table class="table is-striped is-fullwidth"><thead><tr><th>Time</th><th>Namespace</th><th>Pod</th><th>Node</th><th>Job</th><th>Group</th><th>CPU</th><th>Memory</th></tr></thead>
-  <tbody>{% for row in snapshots %}<tr><td>{{ row.observed_at }}</td><td>{{ row.namespace }}</td><td>{{ row.pod_name }}</td><td>{{ row.node_name }}</td><td>{{ row.job_name }}</td><td>{{ row.group_id }}</td><td>{{ row.cpu_nanocores }}</td><td>{{ row.memory_bytes }}</td></tr>{% empty %}<tr><td colspan="8">No samples collected.</td></tr>{% endfor %}</tbody></table>
+  {% for day in days %}{% for group, item in day.groups.items %}<tr><td><a href="{% url 'compute_day' day.date|date:'Y-m-d' %}">{{ day.date.day }}</a></td><td>{{ group }}</td><td>{{ item.seconds|floatformat:1 }}</td><td>{{ item.cpu|floatformat:5 }}</td><td>{{ item.memory|floatformat:5 }}</td><td>{% for currency, amount in item.costs.items %}{{ amount|floatformat:4 }} {{ currency }} {% empty %}—{% endfor %}</td><td>{{ item.unpriced }}</td></tr>{% empty %}<tr><td><a href="{% url 'compute_day' day.date|date:'Y-m-d' %}">{{ day.date.day }}</a></td><td colspan="6">No aggregated data</td></tr>{% endfor %}{% endfor %}</tbody></table>
+  <h2 class="subtitle">Recent workloads</h2>
+  <p>Latest sample per pod in the last five minutes; samples of replicas may have different timestamps.</p>
+  <table class="table is-striped is-fullwidth"><thead><tr><th>Oldest sample</th><th>Workload / job</th><th>Pods</th><th>Nodes</th><th>Group</th><th>CPU nanocores</th><th>Memory bytes</th></tr></thead>
+  <tbody>{% for row in workloads %}<tr><td>{{ row.observed_at }}</td><td>{{ row.name }}</td><td>{{ row.pods|join:", " }}</td><td>{{ row.nodes|join:", " }}</td><td>{{ row.group_id }}</td><td>{{ row.cpu }}</td><td>{{ row.memory }}</td></tr>{% empty %}<tr><td colspan="7">No recent samples.</td></tr>{% endfor %}</tbody></table>
 </div></section>
 {% endblock %}

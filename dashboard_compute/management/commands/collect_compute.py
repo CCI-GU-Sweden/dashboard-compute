@@ -39,6 +39,7 @@ class Command(BaseCommand):
         core = client.CoreV1Api()
         metrics = client.CustomObjectsApi()
         pods = {p.metadata.name: p for p in core.list_namespaced_pod(namespace).items}
+        replica_sets = {r.metadata.name: r for r in client.AppsV1Api().list_namespaced_replica_set(namespace).items}
         data = metrics.list_namespaced_custom_object("metrics.k8s.io", "v1beta1", namespace, "pods")
         rows = []
         usage = []
@@ -56,13 +57,19 @@ class Command(BaseCommand):
             if not job.startswith(job_prefix):
                 continue
             labels = pod.metadata.labels or {}
+            owner = next((o for o in owners if o.controller), None)
+            kind, name = (owner.kind, owner.name) if owner else ("", "")
+            if kind == "ReplicaSet" and name in replica_sets:
+                parent = next((o for o in (replica_sets[name].metadata.owner_references or []) if o.controller and o.kind == "Deployment"), None)
+                if parent:
+                    kind, name = parent.kind, parent.name
             seconds = window_seconds(item.get("window", ""))
             cpu = sum(quantity(c["usage"]["cpu"], 10**9) for c in containers)
             memory = sum(quantity(c["usage"]["memory"]) for c in containers)
             group = labels.get("dashboard.cci.gu.se/omero-group", "CCI") or "CCI"
             rows.append(PodSnapshot(observed_at=timestamp, namespace=namespace,
                 pod_uid=pod.metadata.uid, pod_name=pod.metadata.name,
-                node_name=pod.spec.node_name or "", job_name=job,
+                node_name=pod.spec.node_name or "", job_name=job, workload_kind=kind, workload_name=name,
                 group_id=group, cpu_nanocores=cpu, memory_bytes=memory,
                 window=item.get("window", "")))
             usage.append(UsageRecord(source="kubernetes:" + namespace,
