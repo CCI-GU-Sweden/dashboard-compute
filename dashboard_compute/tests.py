@@ -61,7 +61,7 @@ class CollectorTests(TestCase):
         self.client.force_login(user)
         response = self.client.get("/compute/")
         self.assertContains(response, "CCI")
-        self.assertContains(response, "Unpriced intervals")
+        self.assertContains(response, "Unpriced workloads")
         user.role = "researcher"
         user.save()
         self.assertNotEqual(self.client.get("/compute/").status_code, 200)

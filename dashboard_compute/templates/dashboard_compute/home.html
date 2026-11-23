@@ -5,7 +5,7 @@
   <p>Estimates interpolate between samples of the same pod, up to a five-minute gap. Short or unsampled jobs are missing. Daily totals are not invoices; disk is unavailable. Days use Stockholm time.</p>
   <form method="get"><label>Year <input name="year" type="number" min="1" max="9998" value="{{ month.year }}"></label> <label>Month <input name="month" type="number" min="1" max="12" value="{{ month.month }}"></label> <button type="submit">Show</button></form>
   <h2 class="subtitle">{{ month|date:"F Y" }}</h2>
-  <table class="table is-striped is-fullwidth"><thead><tr><th>Day</th><th>Group</th><th>Observed seconds</th><th>CPU core-hours</th><th>RAM GiB-hours</th><th>Estimated cost</th><th>Unpriced intervals</th></tr></thead><tbody>
+  <table class="table is-striped is-fullwidth"><thead><tr><th>Day</th><th>Group</th><th>Estimated seconds</th><th>CPU core-hours</th><th>RAM GiB-hours</th><th>Estimated cost</th><th>Unpriced workloads</th></tr></thead><tbody>
   {% for day in days %}{% for group, item in day.groups.items %}<tr><td><a href="{% url 'compute_day' day.date|date:'Y-m-d' %}">{{ day.date.day }}</a></td><td>{{ group }}</td><td>{{ item.seconds|floatformat:1 }}</td><td>{{ item.cpu|floatformat:5 }}</td><td>{{ item.memory|floatformat:5 }}</td><td>{% for currency, amount in item.costs.items %}{{ amount|floatformat:4 }} {{ currency }} {% empty %}—{% endfor %}</td><td>{{ item.unpriced }}</td></tr>{% empty %}<tr><td><a href="{% url 'compute_day' day.date|date:'Y-m-d' %}">{{ day.date.day }}</a></td><td colspan="6">No aggregated data</td></tr>{% endfor %}{% endfor %}</tbody></table>
   <h2 class="subtitle">Recent workloads</h2>
   <p>Latest sample per pod in the last five minutes; samples of replicas may have different timestamps.</p>
