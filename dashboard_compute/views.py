@@ -22,10 +22,11 @@ def home(request):
         start = date(today.year, today.month, 1)
     end = date(start.year + (start.month == 12), start.month % 12 + 1, 1)
     records = UsageRecord.objects.filter(ended_at__date__gte=start, ended_at__date__lt=end).order_by("ended_at")
-    days = {day: {"day": day, "cpu": Decimal(0), "memory": Decimal(0), "seconds": 0, "costs": {}, "unpriced": 0} for day in range(1, calendar.monthrange(start.year, start.month)[1] + 1)}
+    days = {day: {"day": day, "groups": {}} for day in range(1, calendar.monthrange(start.year, start.month)[1] + 1)}
     rates = list(Rate.objects.order_by("-effective_from"))
     for record in records:
-        item = days[timezone.localtime(record.ended_at).day]
+        groups = days[timezone.localtime(record.ended_at).day]["groups"]
+        item = groups.setdefault(record.group_id, {"cpu": Decimal(0), "memory": Decimal(0), "seconds": 0, "costs": {}, "unpriced": 0})
         item["cpu"] += record.cpu_core_hours
         item["memory"] += record.memory_gib_hours
         item["seconds"] += (record.ended_at - record.started_at).total_seconds()
