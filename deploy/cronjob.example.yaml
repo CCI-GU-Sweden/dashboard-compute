@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: dashboard-compute-collector
+spec:
+  schedule: "* * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 600
+      template:
+        spec:
+          serviceAccountName: dashboard-compute-collector
+          restartPolicy: Never
+          containers:
+            - name: collect
+              image: REPLACE_WITH_DASHBOARD_IMAGE
+              command: ["python", "manage.py", "collect_compute"]
+              env:
+                - name: COMPUTE_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+              # Add the dashboard's database and Django configuration using approved secrets.

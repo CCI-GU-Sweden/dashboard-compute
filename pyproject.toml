@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dashboard-compute"
+version = "0.1.0"
+description = "Namespace-scoped Kubernetes compute snapshots for the CCI dashboard"
+requires-python = ">=3.12"
+dependencies = ["Django>=4.2", "kubernetes>=28"]
+
+[tool.setuptools.packages.find]
+include = ["dashboard_compute*"]
+
+[tool.setuptools.package-data]
+dashboard_compute = ["templates/dashboard_compute/*.html"]
