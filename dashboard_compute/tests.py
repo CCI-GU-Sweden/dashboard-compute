@@ -7,6 +7,7 @@ from unittest.mock import patch, MagicMock
 from django.core.management import call_command
 from .models import UsageRecord, PodSnapshot
 from .aggregation import calculate, aggregate, ZONE
+from .charts import daily_chart, monthly_chart
 from django.core.management.base import CommandError
 from .management.commands.collect_compute import quantity, window_seconds
 
@@ -62,6 +63,9 @@ class CollectorTests(TestCase):
         response = self.client.get("/compute/")
         self.assertContains(response, "CCI")
         self.assertContains(response, "Unpriced workloads")
+        self.assertContains(response, "compute-month-chart")
+        detail = self.client.get(f"/compute/day/{now.astimezone(ZONE).date().isoformat()}/")
+        self.assertContains(detail, "compute-day-chart")
         user.role = "researcher"
         user.save()
         self.assertNotEqual(self.client.get("/compute/").status_code, 200)
@@ -98,3 +102,36 @@ class CollectorTests(TestCase):
                 pod_name="p", group_id="CCI", cpu_nanocores=1000000000, memory_bytes=1073741824)
         self.assertEqual(calculate((midnight - timedelta(days=1)).date())[0]["estimated_seconds"], 30)
         self.assertEqual(calculate(midnight.date())[0]["estimated_seconds"], 30)
+
+    def test_chart_keeps_large_sample_gap_missing(self):
+        now = timezone.now().astimezone(ZONE).replace(hour=12, minute=0, second=0, microsecond=0) - timedelta(days=1)
+        for offset in (0, 60, 600, 660):
+            PodSnapshot.objects.create(observed_at=now + timedelta(seconds=offset), namespace="test", pod_uid="u",
+                pod_name="pod", group_id="CCI", cpu_nanocores=1000000000, memory_bytes=1073741824)
+        chart = daily_chart(now.date())
+        item = chart["series"][0]
+        minute = chart["times"].index(now.astimezone(__import__('datetime').timezone.utc).isoformat())
+        self.assertEqual(item["cpu"][minute], 1)
+        self.assertIsNone(item["cpu"][minute + 5])
+        self.assertEqual(item["cpu"][minute + 11], 1)
+
+    def test_cost_chart_requires_all_rates_and_one_currency(self):
+        now = timezone.now().date()
+        row = dict(workload_name="web", workload_key="Deployment:web", group_id="CCI", namespace="test",
+            cpu_core_hours=Decimal(1), memory_gib_hours=Decimal(2), cost=None, currency="")
+        self.assertFalse(monthly_chart([(now, [row])])["cost_available"])
+        row.update(cost=Decimal(3), currency="SEK")
+        self.assertTrue(monthly_chart([(now, [row])])["cost_available"])
+
+    def test_chart_merges_deployment_replicas_but_separates_jobs(self):
+        now = timezone.now().astimezone(ZONE).replace(hour=12, minute=0, second=0, microsecond=0) - timedelta(days=1)
+        for uid, kind, name, job in (("a", "Deployment", "web", ""), ("b", "Deployment", "web", ""),
+                                      ("c", "Job", "job", "job"), ("d", "Job", "job", "job")):
+            for offset in (0, 60):
+                PodSnapshot.objects.create(observed_at=now + timedelta(seconds=offset), namespace="test", pod_uid=uid,
+                    pod_name=uid, group_id="CCI", workload_kind=kind, workload_name=name, job_name=job,
+                    cpu_nanocores=1000000000, memory_bytes=1073741824)
+        chart = daily_chart(now.date())
+        self.assertEqual(len(chart["series"]), 3)
+        deployment = next(s for s in chart["series"] if s["key"] == "Deployment:web")
+        self.assertIn(2, deployment["cpu"])

@@ -1,10 +1,16 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load static %}
 {% block content %}
 <section class="section"><div class="container">
 <a href="{% url 'compute_home' %}?year={{ day.year }}&amp;month={{ day.month }}">Back to calendar</a>
 <h1 class="title">Compute usage: {{ day|date:"Y-m-d" }}</h1>
 <p>Interpolated between samples of the same pod, up to five minutes apart. Durations add across pods; a job without two nearby samples has no estimated usage.</p>
+<label>Metric <select id="compute-metric"><option value="cpu">CPU cores</option><option value="memory">RAM GiB</option></select></label>
+<div id="compute-day-chart" role="img" aria-label="Estimated resource usage over the day; details are in the table below"></div>
+<p id="compute-day-empty" hidden>Not enough consecutive samples to draw this day.</p>
+<p class="small-note">One-minute estimates, shown in Stockholm time. Gaps are missing data; sampled workloads may not account for unobserved jobs.</p>
+{{ chart|json_script:"compute-chart-data" }}
 <table class="table is-striped is-fullwidth"><thead><tr><th>Workload / job</th><th>Group</th><th>Pods</th><th>Nodes</th><th>Samples</th><th>Estimated seconds</th><th>CPU core-hours</th><th>RAM GiB-hours</th><th>Estimated cost</th></tr></thead><tbody>
 {% for row in rows %}<tr><td>{{ row.workload_name }}</td><td>{{ row.group_id }}</td><td>{{ row.pod_names|join:", " }}</td><td>{{ row.nodes|join:", " }}</td><td>{{ row.sample_count }}</td><td>{{ row.estimated_seconds|floatformat:1 }}</td><td>{{ row.cpu_core_hours|floatformat:5 }}</td><td>{{ row.memory_gib_hours|floatformat:5 }}</td><td>{% if row.cost is not None %}{{ row.cost|floatformat:4 }} {{ row.currency }}{% else %}Unpriced{% endif %}</td></tr>{% empty %}<tr><td colspan="9">No aggregated data for this day.</td></tr>{% endfor %}</tbody></table>
 </div></section>
+<script src="{% static 'vendor/plotly/plotly.min.js' %}" defer></script><script src="{% static 'dashboard_compute/charts.js' %}" defer></script>
 {% endblock %}

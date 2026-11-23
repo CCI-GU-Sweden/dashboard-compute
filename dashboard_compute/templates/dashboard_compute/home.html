@@ -1,10 +1,16 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load static %}
 {% block content %}
 <section class="section"><div class="container">
   <h1 class="title">Compute snapshots</h1>
   <p>Estimates interpolate between samples of the same pod, up to a five-minute gap. Short or unsampled jobs are missing. Daily totals are not invoices; disk is unavailable. Days use Stockholm time.</p>
   <form method="get"><label>Year <input name="year" type="number" min="1" max="9998" value="{{ month.year }}"></label> <label>Month <input name="month" type="number" min="1" max="12" value="{{ month.month }}"></label> <button type="submit">Show</button></form>
   <h2 class="subtitle">{{ month|date:"F Y" }}</h2>
+  <div class="field is-grouped"><label>Metric <select id="compute-metric"><option value="cpu">CPU core-hours</option><option value="memory">RAM GiB-hours</option><option value="cost" {% if not chart.cost_available %}disabled{% endif %}>Estimated cost{% if chart.currency %} ({{ chart.currency }}){% endif %}</option></select></label>
+  <label>Group by <select id="compute-grouping"><option value="workload">Workload</option><option value="group">Group</option></select></label></div>
+  {% if not chart.cost_available %}<p class="small-note">Cost chart unavailable until all displayed workloads have rates in one currency.</p>{% endif %}
+  <div id="compute-month-chart" role="img" aria-label="Daily estimated compute usage; use the table below to open a day"></div>
+  <p id="compute-month-empty" hidden>No aggregated usage for this month yet.</p>
+  {{ chart|json_script:"compute-chart-data" }}
   <table class="table is-striped is-fullwidth"><thead><tr><th>Day</th><th>Group</th><th>Estimated seconds</th><th>CPU core-hours</th><th>RAM GiB-hours</th><th>Estimated cost</th><th>Unpriced workloads</th></tr></thead><tbody>
   {% for day in days %}{% for group, item in day.groups.items %}<tr><td><a href="{% url 'compute_day' day.date|date:'Y-m-d' %}">{{ day.date.day }}</a></td><td>{{ group }}</td><td>{{ item.seconds|floatformat:1 }}</td><td>{{ item.cpu|floatformat:5 }}</td><td>{{ item.memory|floatformat:5 }}</td><td>{% for currency, amount in item.costs.items %}{{ amount|floatformat:4 }} {{ currency }} {% empty %}—{% endfor %}</td><td>{{ item.unpriced }}</td></tr>{% empty %}<tr><td><a href="{% url 'compute_day' day.date|date:'Y-m-d' %}">{{ day.date.day }}</a></td><td colspan="6">No aggregated data</td></tr>{% endfor %}{% endfor %}</tbody></table>
   <h2 class="subtitle">Recent workloads</h2>
@@ -12,4 +18,5 @@
   <table class="table is-striped is-fullwidth"><thead><tr><th>Oldest sample</th><th>Workload / job</th><th>Pods</th><th>Nodes</th><th>Group</th><th>CPU nanocores</th><th>Memory bytes</th></tr></thead>
   <tbody>{% for row in workloads %}<tr><td>{{ row.observed_at }}</td><td>{{ row.name }}</td><td>{{ row.pods|join:", " }}</td><td>{{ row.nodes|join:", " }}</td><td>{{ row.group_id }}</td><td>{{ row.cpu }}</td><td>{{ row.memory }}</td></tr>{% empty %}<tr><td colspan="7">No recent samples.</td></tr>{% endfor %}</tbody></table>
 </div></section>
+<script src="{% static 'vendor/plotly/plotly.min.js' %}" defer></script><script src="{% static 'dashboard_compute/charts.js' %}" defer></script>
 {% endblock %}

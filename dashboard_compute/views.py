@@ -9,6 +9,7 @@ from django.utils import timezone
 from accounts.permissions import operational_access
 
 from .aggregation import ZONE, bounds, calculate, workload
+from .charts import daily_chart, monthly_chart
 from .models import DailyUsage, PodSnapshot, Rate
 
 
@@ -71,9 +72,11 @@ def home(request):
     except (ValueError, OverflowError):
         start = date(today.year, today.month, 1)
     days = []
+    chart_days = []
     for number in range(1, calendar.monthrange(start.year, start.month)[1] + 1):
         day = date(start.year, start.month, number)
         rows = day_rows(day) if day <= today else []
+        chart_days.append((day, rows))
         groups = {}
         for row in rows:
             item = groups.setdefault(row["group_id"], {"cpu": Decimal(0), "memory": Decimal(0), "seconds": Decimal(0), "costs": {}, "unpriced": 0})
@@ -85,7 +88,7 @@ def home(request):
             else:
                 item["costs"][row["currency"]] = item["costs"].get(row["currency"], Decimal(0)) + row["cost"]
         days.append({"date": day, "groups": groups})
-    return render(request, "dashboard_compute/home.html", {"days": days, "month": start, "workloads": latest_workloads()})
+    return render(request, "dashboard_compute/home.html", {"days": days, "month": start, "workloads": latest_workloads(), "chart": monthly_chart(chart_days)})
 
 
 @login_required
@@ -93,6 +96,8 @@ def home(request):
 def day_detail(request, day):
     try:
         selected = date.fromisoformat(day)
+        if selected.year > 9998:
+            raise ValueError()
     except ValueError:
         raise Http404("Invalid date")
-    return render(request, "dashboard_compute/day.html", {"day": selected, "rows": day_rows(selected)})
+    return render(request, "dashboard_compute/day.html", {"day": selected, "rows": day_rows(selected), "chart": daily_chart(selected)})
