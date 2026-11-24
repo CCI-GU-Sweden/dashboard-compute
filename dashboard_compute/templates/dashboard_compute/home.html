@@ -1,6 +1,6 @@
 {% extends "base.html" %}{% load static %}
 {% block content %}
-<section class="section"><div class="container">
+<link rel="stylesheet" href="{% static 'dashboard_compute/charts.css' %}"><section class="section"><div class="container">
   <h1 class="title">Compute snapshots</h1>
   <p>Estimates interpolate between samples of the same pod, up to a five-minute gap. Short or unsampled jobs are missing. Daily totals are not invoices; disk is unavailable. Days use Stockholm time.</p>
   <form method="get"><label>Year <input name="year" type="number" min="1" max="9998" value="{{ month.year }}"></label> <label>Month <input name="month" type="number" min="1" max="12" value="{{ month.month }}"></label> <button type="submit">Show</button></form>
@@ -8,7 +8,8 @@
   <div class="field is-grouped"><label>Metric <select id="compute-metric"><option value="cpu">CPU core-hours</option><option value="memory">RAM GiB-hours</option><option value="cost" {% if not chart.cost_available %}disabled{% endif %}>Estimated cost{% if chart.currency %} ({{ chart.currency }}){% endif %}</option></select></label>
   <label>Group by <select id="compute-grouping"><option value="workload">Workload</option><option value="group">Group</option></select></label></div>
   {% if not chart.cost_available %}<p class="small-note">Cost chart unavailable until all displayed workloads have rates in one currency.</p>{% endif %}
-  <div id="compute-month-chart" role="img" aria-label="Daily estimated compute usage; use the table below to open a day"></div>
+  <p class="small-note">Click a legend item to isolate it; click it again to show all workloads.</p>
+  <div id="compute-month-chart" class="compute-chart" role="img" aria-label="Daily estimated compute usage; use the table below to open a day"></div>
   <p id="compute-month-empty" hidden>No aggregated usage for this month yet.</p>
   {{ chart|json_script:"compute-chart-data" }}
   <table class="table is-striped is-fullwidth"><thead><tr><th>Day</th><th>Group</th><th>Estimated seconds</th><th>CPU core-hours</th><th>RAM GiB-hours</th><th>Estimated cost</th><th>Unpriced workloads</th></tr></thead><tbody>

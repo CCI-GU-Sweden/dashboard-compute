@@ -27,12 +27,17 @@ async function exercise(kind, data) {
     {day:'2026-11-23', url:'/compute/day/2026-11-23/', namespace:'test', group:'CCI', key:'pod:b', name:'job', cpu:4, memory:5, cost:null},
   ]});
   assert.equal(month.calls[0][1].length, 2);
+  assert.equal(month.calls[0][2].height, 585);
   month.handlers.plotly_click({points: [{customdata: '/compute/day/2026-11-23/'}]});
   assert.equal(month.navigated, '/compute/day/2026-11-23/');
+  assert.equal(month.handlers.plotly_legendclick({curveNumber: 1}), false);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(month.calls[1][1][0].visible, 'legendonly');
+  assert.equal(month.calls[1][1][1].visible, true);
   month.grouping.value = 'group';
   await month.handlers.grouping();
-  assert.equal(month.calls[1][1].length, 1);
-  assert.equal(month.calls[1][1][0].y[0], 6);
+  assert.equal(month.calls[2][1].length, 1);
+  assert.equal(month.calls[2][1][0].y[0], 6);
   const day = await exercise('day', {timezone:'Europe/Stockholm', times:['2026-11-23T10:00:00Z','2026-11-23T10:01:00Z'], series:[
     {name:'web', group:'CCI', key:'Deployment:web', cpu:[1,null], memory:[2,null]},
     {name:'job', group:'CCI', key:'pod:a', cpu:[3,null], memory:[4,null]},
@@ -40,8 +45,16 @@ async function exercise(kind, data) {
   assert.equal(day.calls[0][1][1].y[0], 4);
   assert.equal(day.calls[0][1][1].y[1], null);
   assert.equal(day.calls[0][1][1].customdata[0][0], 3);
+  assert.equal(day.handlers.plotly_legendclick({curveNumber: 1}), false);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(day.calls[1][1][0].visible, 'legendonly');
+  assert.equal(day.calls[1][1][1].y[0], 3);
+  assert.equal(day.calls[1][1][1].fill, 'tozeroy');
+  assert.equal(day.handlers.plotly_legendclick({curveNumber: 1}), false);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(day.calls[2][1][1].y[0], 4);
   day.metric.value = 'memory';
   day.handlers.metric();
-  assert.equal(day.calls[1][1][1].y[0], 6);
+  assert.equal(day.calls[3][1][1].y[0], 6);
   console.log('compute charts frontend passed');
 })().catch(error => { console.error(error); process.exitCode = 1; });

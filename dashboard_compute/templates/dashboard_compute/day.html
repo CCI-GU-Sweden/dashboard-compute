@@ -1,11 +1,12 @@
 {% extends "base.html" %}{% load static %}
 {% block content %}
-<section class="section"><div class="container">
+<link rel="stylesheet" href="{% static 'dashboard_compute/charts.css' %}"><section class="section"><div class="container">
 <a href="{% url 'compute_home' %}?year={{ day.year }}&amp;month={{ day.month }}">Back to calendar</a>
 <h1 class="title">Compute usage: {{ day|date:"Y-m-d" }}</h1>
 <p>Interpolated between samples of the same pod, up to five minutes apart. Durations add across pods; a job without two nearby samples has no estimated usage.</p>
 <label>Metric <select id="compute-metric"><option value="cpu">CPU cores</option><option value="memory">RAM GiB</option></select></label>
-<div id="compute-day-chart" role="img" aria-label="Estimated resource usage over the day; details are in the table below"></div>
+<p class="small-note">Click a legend item to isolate it; click it again to show all workloads.</p>
+<div id="compute-day-chart" class="compute-chart" role="img" aria-label="Estimated resource usage over the day; details are in the table below"></div>
 <p id="compute-day-empty" hidden>Not enough consecutive samples to draw this day.</p>
 <p class="small-note">One-minute estimates, shown in Stockholm time. Gaps are missing data; sampled workloads may not account for unobserved jobs.</p>
 {{ chart|json_script:"compute-chart-data" }}
